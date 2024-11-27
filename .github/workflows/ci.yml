@@ -51,10 +51,10 @@ jobs:
       - name: Verify GCC version
         run: g++ --version
 
-      - name: Install SDL2 development libraries
+      - name: Install SDL2 and libcurl development libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev
+          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
 
       - name: Get number of CPU cores
         id: cpu_info
@@ -184,10 +184,10 @@ jobs:
           sudo apt-get install -y g++-12
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
-      - name: Install SDL2 development libraries
+      - name: Install SDL2 and libcurl development libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev
+          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
 
       - name: Get number of CPU cores
         id: cpu_info
@@ -321,10 +321,10 @@ jobs:
           sudo apt-get install -y g++-12
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
-      - name: Install SDL2 development libraries
+      - name: Install SDL2 and libcurl development libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev
+          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
 
       - name: Download automation3.zip
         run: |
@@ -438,6 +438,12 @@ jobs:
         with:
           name: linux64
           path: Deploy/Linux64
+
+      - name: Download artifacts (linux)
+        uses: actions/download-artifact@v3
+        with:
+          name: linux
+          path: Deploy/Linux
 
       - name: Download artifacts (mac)
         uses: actions/download-artifact@v3
