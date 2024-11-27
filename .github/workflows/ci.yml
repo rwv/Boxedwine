@@ -4,7 +4,9 @@ name: CI
 
 on:
   push:
+    branches: [master]
   pull_request:
+    branches: [master]
 
 jobs:
   # Test Stage
@@ -39,6 +41,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # **Install SDL2 development libraries**
+      - name: Install SDL2 development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+
       - name: Build and run tests
         shell: bash
         run: |
@@ -70,6 +78,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      # **Set up MSBuild**
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.0.2
 
       - name: Build and run tests for win32
         shell: cmd
@@ -133,6 +145,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      # **Install SDL2 development libraries**
+      - name: Install SDL2 development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
 
       - name: Build release and multi-threaded versions
         shell: bash
@@ -202,6 +220,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # **Set up MSBuild**
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.0.2
+
       - name: Build Release for win32 and x64
         shell: cmd
         run: |
@@ -232,6 +254,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      # **Install SDL2 development libraries**
+      - name: Install SDL2 development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
 
       - name: Download automation3.zip
         run: |
@@ -297,6 +325,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # **Set up MSBuild (if needed)**
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.0.2
+
       - name: Download automation3.zip
         shell: cmd
         run: |
@@ -325,6 +357,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Create Deploy directory
+        run: mkdir -p Deploy
 
       - name: Download artifacts (web)
         uses: actions/download-artifact@v3
