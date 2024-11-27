@@ -41,6 +41,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install build tools and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          sudo apt-get build-dep -y wine
+          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
+
       - name: Install GCC 12
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
@@ -50,11 +57,6 @@ jobs:
 
       - name: Verify GCC version
         run: g++ --version
-
-      - name: Install SDL2 and libcurl development libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
 
       - name: Get number of CPU cores
         id: cpu_info
@@ -160,8 +162,6 @@ jobs:
           cp jszip.min.js Deploy/Web
           cp browserfs.boxedwine.js Deploy/Web
           cp boxedwine.wasm Deploy/Web
-          # Adjust the following line as needed
-          # cp /var/www/buildfiles/* Deploy/Web
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
@@ -177,17 +177,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install build tools and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          sudo apt-get build-dep -y wine
+          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
+
       - name: Install GCC 12
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install -y g++-12
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
-
-      - name: Install SDL2 and libcurl development libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
 
       - name: Get number of CPU cores
         id: cpu_info
@@ -314,17 +316,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install build tools and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          sudo apt-get build-dep -y wine
+          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
+
       - name: Install GCC 12
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install -y g++-12
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
-
-      - name: Install SDL2 and libcurl development libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
 
       - name: Download automation3.zip
         run: |
