@@ -41,6 +41,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install GCC 11
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install -y g++-11
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+
       # **Install SDL2 development libraries**
       - name: Install SDL2 development libraries
         run: |
@@ -145,6 +152,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Install GCC 11
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install -y g++-11
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
       # **Install SDL2 development libraries**
       - name: Install SDL2 development libraries
@@ -254,6 +268,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Install GCC 11
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install -y g++-11
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
       # **Install SDL2 development libraries**
       - name: Install SDL2 development libraries
