@@ -41,27 +41,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install GCC 11
+      - name: Install GCC 12
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install -y g++-11
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+          sudo apt-get install -y g++-12
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
-      # **Install SDL2 development libraries**
+      - name: Verify GCC version
+        run: g++ --version
+
       - name: Install SDL2 development libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y libsdl2-dev
 
+      - name: Get number of CPU cores
+        id: cpu_info
+        run: echo "cores=$(nproc)" >> $GITHUB_OUTPUT
+
       - name: Build and run tests
         shell: bash
+        env:
+          CXX: g++-12
+          CORES: ${{ steps.cpu_info.outputs.cores }}
         run: |
           set -e
           cd project/linux
-          make test
+          make clean
+          make test CXXFLAGS="-std=c++20 -Wno-format-security" -j$CORES VERBOSE=1
           ./Build/Test/boxedwine
-          make testMultiThreaded
+          make testMultiThreaded CXXFLAGS="-std=c++20 -Wno-format-security" -j$CORES VERBOSE=1
           ./Build/TestMultiThreaded/boxedwine
 
   test-mac:
@@ -71,11 +81,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Get number of CPU cores
+        id: cpu_info
+        run: echo "cores=$(sysctl -n hw.logicalcpu)" >> $GITHUB_OUTPUT
+
       - name: Build and run tests
         shell: bash
+        env:
+          CORES: ${{ steps.cpu_info.outputs.cores }}
         run: |
           set -e
           cd project/mac-xcode
+          export MAKEFLAGS="-j$CORES"
           /bin/bash buildTest.sh
           bin/BoxedwineTest.app/Contents/MacOS/BoxedwineTest
 
@@ -86,20 +103,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # **Set up MSBuild**
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.0.2
 
       - name: Build and run tests for win32
         shell: cmd
         run: |
-          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Test;Platform=win32
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" ^
+            /p:Configuration=Test;Platform=win32 ^
+            /p:PlatformToolset=v142 ^
+            /p:CXXLanguageStandard=stdcpp20 ^
+            /p:AdditionalOptions="/fp:precise"
           project\msvc\BoxedWine\Test\BoxedWine.exe
 
       - name: Build and run tests for x64
         shell: cmd
         run: |
-          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Test;Platform=x64
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" ^
+            /p:Configuration=Test;Platform=x64 ^
+            /p:PlatformToolset=v142 ^
+            /p:CXXLanguageStandard=stdcpp20 ^
+            /p:AdditionalOptions="/fp:precise"
           project\msvc\BoxedWine\x64\Test\BoxedWine.exe
 
   # Build Stage
@@ -153,29 +177,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install GCC 11
+      - name: Install GCC 12
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install -y g++-11
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+          sudo apt-get install -y g++-12
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
-      # **Install SDL2 development libraries**
       - name: Install SDL2 development libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y libsdl2-dev
 
+      - name: Get number of CPU cores
+        id: cpu_info
+        run: echo "cores=$(nproc)" >> $GITHUB_OUTPUT
+
       - name: Build release and multi-threaded versions
         shell: bash
+        env:
+          CXX: g++-12
+          CORES: ${{ steps.cpu_info.outputs.cores }}
         run: |
           set -e
           cd project/linux
+          make clean
           rm Build/MultiThreaded/boxedwine || true
           rm Build/Release/boxedwine || true
           rm Build/Deploy/Linux64/boxedwine || true
-          make release
-          make multiThreaded
+          make release CXXFLAGS="-std=c++20 -Wno-format-security" -j$CORES VERBOSE=1
+          make multiThreaded CXXFLAGS="-std=c++20 -Wno-format-security" -j$CORES VERBOSE=1
           mkdir -p Build/Deploy/Linux64
           mkdir -p Build/Deploy/Linux
           if [ ! -f "Build/MultiThreaded/boxedwine" ]; then
@@ -205,14 +236,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Get number of CPU cores
+        id: cpu_info
+        run: echo "cores=$(sysctl -n hw.logicalcpu)" >> $GITHUB_OUTPUT
+
       - name: Build Release
         shell: bash
+        env:
+          CORES: ${{ steps.cpu_info.outputs.cores }}
         run: |
           set -e
           cd project/mac-xcode
           rm -rf bin/Boxedwine.app || true
           rm -rf Deploy/Mac/Boxedwine.app || true
           mkdir -p Deploy/Mac
+          export MAKEFLAGS="-j$CORES"
           /bin/bash buildRelease.sh
           if [ ! -d "bin/Boxedwine.app" ]; then
             echo "bin/Boxedwine.app DOES NOT exist."
@@ -234,7 +272,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # **Set up MSBuild**
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.0.2
 
@@ -245,8 +282,16 @@ jobs:
           IF EXIST "project\msvc\Boxedwine\x64\Release\Boxedwine.exe" DEL "project\msvc\Boxedwine\x64\Release\Boxedwine.exe"
           IF NOT EXIST "project\msvc\Deploy\Win32" mkdir "project\msvc\Deploy\Win32"
           IF NOT EXIST "project\msvc\Deploy\Win64" mkdir "project\msvc\Deploy\Win64"
-          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Release;Platform=win32
-          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Release;Platform=x64
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" ^
+            /p:Configuration=Release;Platform=win32 ^
+            /p:PlatformToolset=v142 ^
+            /p:CXXLanguageStandard=stdcpp20 ^
+            /p:AdditionalOptions="/fp:precise"
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" ^
+            /p:Configuration=Release;Platform=x64 ^
+            /p:PlatformToolset=v142 ^
+            /p:CXXLanguageStandard=stdcpp20 ^
+            /p:AdditionalOptions="/fp:precise"
           move project\msvc\Boxedwine\Release\Boxedwine.exe project\msvc\Deploy\Win32\
           copy project\msvc\Deploy\Win32\Boxedwine.exe project\msvc\Deploy\Win32\Boxedwine_console.exe
           editbin.exe /subsystem:console project\msvc\Deploy\Win32\Boxedwine_console.exe
@@ -269,14 +314,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install GCC 11
+      - name: Install GCC 12
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install -y g++-11
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+          sudo apt-get install -y g++-12
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
-      # **Install SDL2 development libraries**
       - name: Install SDL2 development libraries
         run: |
           sudo apt-get update
@@ -296,6 +340,8 @@ jobs:
 
       - name: Run automation scripts
         shell: bash
+        env:
+          CXX: g++-12
         run: |
           set -e
           cd automation
@@ -346,7 +392,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # **Set up MSBuild (if needed)**
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.0.2
 
@@ -394,12 +439,6 @@ jobs:
           name: linux64
           path: Deploy/Linux64
 
-      - name: Download artifacts (linux)
-        uses: actions/download-artifact@v3
-        with:
-          name: linux
-          path: Deploy/Linux
-
       - name: Download artifacts (mac)
         uses: actions/download-artifact@v3
         with:
@@ -414,7 +453,7 @@ jobs:
 
       - name: Create readme.txt
         run: |
-          echo "Linux64, LinuxArm64, and Win64 use the binary translator CPU core and are much faster. The others use the normal core or normal core + JIT." > Deploy/readme.txt
+          echo "Linux64 and Win64 use the binary translator CPU core and are much faster. The others use the normal core or normal core + JIT." > Deploy/readme.txt
 
       - name: Create zip file
         run: |
