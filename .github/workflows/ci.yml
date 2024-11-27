@@ -41,14 +41,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Enable repositories and install dependencies
+      - name: Install build tools and dependencies
         run: |
-          sudo add-apt-repository universe
-          sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y build-essential
-          sudo apt-get build-dep -y wine
-          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
+          sudo apt-get install -y zlib1g-dev libminizip-dev libsdl2-dev libssl-dev libcurl4-openssl-dev
 
       - name: Install GCC 12
         run: |
@@ -179,14 +176,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Enable repositories and install dependencies
+      - name: Install build tools and dependencies
         run: |
-          sudo add-apt-repository universe
-          sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y build-essential
-          sudo apt-get build-dep -y wine
-          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
+          sudo apt-get install -y zlib1g-dev libminizip-dev libsdl2-dev libssl-dev libcurl4-openssl-dev
 
       - name: Install GCC 12
         run: |
@@ -320,14 +314,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Enable repositories and install dependencies
+      - name: Install build tools and dependencies
         run: |
-          sudo add-apt-repository universe
-          sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y build-essential
-          sudo apt-get build-dep -y wine
-          sudo apt-get install -y libsdl2-dev libcurl4-openssl-dev
+          sudo apt-get install -y zlib1g-dev libminizip-dev libsdl2-dev libssl-dev libcurl4-openssl-dev
 
       - name: Install GCC 12
         run: |
