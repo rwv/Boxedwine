@@ -1,0 +1,371 @@
+# .github/workflows/ci.yml
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Test Stage
+  test-emscripten:
+    name: Test Emscripten
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Firefox
+        run: sudo apt-get install -y firefox
+
+      - name: Install Emscripten SDK and run tests
+        shell: bash
+        run: |
+          set -e
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install latest
+          ./emsdk activate latest
+          source ./emsdk_env.sh
+          cd $GITHUB_WORKSPACE/project/emscripten
+          sh buildtestjs.sh
+          killall -9 python3 || true
+          emrun --kill_start --kill_exit --browser="/usr/bin/firefox" --browser_args="--headless" boxedwineTest.html
+
+  test-linux64:
+    name: Test Linux (x64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build and run tests
+        shell: bash
+        run: |
+          set -e
+          cd project/linux
+          make test
+          ./Build/Test/boxedwine
+          make testMultiThreaded
+          ./Build/TestMultiThreaded/boxedwine
+
+  test-mac:
+    name: Test Mac
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build and run tests
+        shell: bash
+        run: |
+          set -e
+          cd project/mac-xcode
+          /bin/bash buildTest.sh
+          bin/BoxedwineTest.app/Contents/MacOS/BoxedwineTest
+
+  test-windows:
+    name: Test Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build and run tests for win32
+        shell: cmd
+        run: |
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Test;Platform=win32
+          project\msvc\BoxedWine\Test\BoxedWine.exe
+
+      - name: Build and run tests for x64
+        shell: cmd
+        run: |
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Test;Platform=x64
+          project\msvc\BoxedWine\x64\Test\BoxedWine.exe
+
+  # Build Stage
+  build-emscripten:
+    name: Build Emscripten
+    runs-on: ubuntu-latest
+    needs: [test-emscripten]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Emscripten SDK and build
+        shell: bash
+        run: |
+          set -e
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install latest
+          ./emsdk activate latest
+          source ./emsdk_env.sh
+          cd $GITHUB_WORKSPACE/project/emscripten
+          rm boxedwine.wasm || true
+          rm -rf Deploy || true
+          sh buildjs.sh
+          if [ ! -f "boxedwine.wasm" ]; then
+            echo "boxedwine.wasm DOES NOT exist."
+            exit 999
+          fi
+          mkdir -p Deploy/Web
+          cp boxedwine.html Deploy/Web
+          cp boxedwine.css Deploy/Web
+          cp boxedwine-shell.js Deploy/Web
+          cp boxedwine.js Deploy/Web
+          cp jszip.min.js Deploy/Web
+          cp browserfs.boxedwine.js Deploy/Web
+          cp boxedwine.wasm Deploy/Web
+          # Adjust the following line as needed
+          # cp /var/www/buildfiles/* Deploy/Web
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: web
+          path: project/emscripten/Deploy/Web
+
+  build-linux64:
+    name: Build Linux (x64)
+    runs-on: ubuntu-latest
+    needs: [test-linux64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build release and multi-threaded versions
+        shell: bash
+        run: |
+          set -e
+          cd project/linux
+          rm Build/MultiThreaded/boxedwine || true
+          rm Build/Release/boxedwine || true
+          rm Build/Deploy/Linux64/boxedwine || true
+          make release
+          make multiThreaded
+          mkdir -p Build/Deploy/Linux64
+          mkdir -p Build/Deploy/Linux
+          if [ ! -f "Build/MultiThreaded/boxedwine" ]; then
+            echo "Build/MultiThreaded/boxedwine DOES NOT exist."
+            exit 999
+          fi
+          if [ ! -f "Build/Release/boxedwine" ]; then
+            echo "Build/Release/boxedwine DOES NOT exist."
+            exit 999
+          fi
+          cp Build/MultiThreaded/boxedwine Build/Deploy/Linux64/
+          cp Build/Release/boxedwine Build/Deploy/Linux/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux64
+          path: |
+            project/linux/Build/Deploy/Linux64/boxedwine
+            project/linux/Build/Deploy/Linux/boxedwine
+
+  build-mac:
+    name: Build Mac
+    runs-on: macos-latest
+    needs: [test-mac]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Release
+        shell: bash
+        run: |
+          set -e
+          cd project/mac-xcode
+          rm -rf bin/Boxedwine.app || true
+          rm -rf Deploy/Mac/Boxedwine.app || true
+          mkdir -p Deploy/Mac
+          /bin/bash buildRelease.sh
+          if [ ! -d "bin/Boxedwine.app" ]; then
+            echo "bin/Boxedwine.app DOES NOT exist."
+            exit 999
+          fi
+          mv bin/Boxedwine.app Deploy/Mac/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: mac
+          path: project/mac-xcode/Deploy/Mac
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: [test-windows]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Release for win32 and x64
+        shell: cmd
+        run: |
+          IF EXIST "project\msvc\Boxedwine\Release\Boxedwine.exe" DEL "project\msvc\Boxedwine\Release\Boxedwine.exe"
+          IF EXIST "project\msvc\Boxedwine\x64\Release\Boxedwine.exe" DEL "project\msvc\Boxedwine\x64\Release\Boxedwine.exe"
+          IF NOT EXIST "project\msvc\Deploy\Win32" mkdir "project\msvc\Deploy\Win32"
+          IF NOT EXIST "project\msvc\Deploy\Win64" mkdir "project\msvc\Deploy\Win64"
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Release;Platform=win32
+          msbuild "project/msvc/BoxedWine/BoxedWine.sln" /p:Configuration=Release;Platform=x64
+          move project\msvc\Boxedwine\Release\Boxedwine.exe project\msvc\Deploy\Win32\
+          copy project\msvc\Deploy\Win32\Boxedwine.exe project\msvc\Deploy\Win32\Boxedwine_console.exe
+          editbin.exe /subsystem:console project\msvc\Deploy\Win32\Boxedwine_console.exe
+          move project\msvc\Boxedwine\x64\Release\Boxedwine.exe project\msvc\Deploy\Win64\
+          copy project\msvc\Deploy\Win64\Boxedwine.exe project\msvc\Deploy\Win64\Boxedwine_console.exe
+          editbin.exe /subsystem:console project\msvc\Deploy\Win64\Boxedwine_console.exe
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows
+          path: project\msvc\Deploy
+
+  # Automation Stage
+  automation-linux64:
+    name: Linux (x64) Automation
+    runs-on: ubuntu-latest
+    needs: [build-linux64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download automation3.zip
+        run: |
+          wget -N --no-if-modified-since -np http://boxedwine.org/v2/automation3.zip
+          rm -rf automation
+          unzip automation3.zip
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: linux64
+          path: automation/Deploy
+
+      - name: Run automation scripts
+        shell: bash
+        run: |
+          set -e
+          cd automation
+          for i in {1..3}; do
+            java -jar bin/BoxedWineRunner.jar "$PWD/fs/fs.zip" "$PWD/scripts/" "$PWD/Deploy/Linux64/boxedwine" -nosound -novideo && break || sleep 5
+          done
+
+  automation-mac:
+    name: Mac Automation
+    runs-on: macos-latest
+    needs: [build-mac]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download automation3.zip
+        run: |
+          curl -z automation3.zip http://boxedwine.org/v2/automation3.zip --output automation3.zip
+          rm -rf automation
+          unzip automation3.zip
+
+      - name: Build Automation App
+        shell: bash
+        run: |
+          set -e
+          cd project/mac-xcode
+          rm -rf bin/BoxedwineAutomation.app
+          /bin/bash buildAutomation.sh
+          if [ ! -d "bin/BoxedwineAutomation.app" ]; then
+            echo "bin/BoxedwineAutomation.app DOES NOT exist."
+            exit 999
+          fi
+
+      - name: Run automation scripts
+        shell: bash
+        run: |
+          set -e
+          cd automation
+          for i in {1..3}; do
+            java -jar bin/BoxedWineRunner.jar "$PWD/fs/fs.zip" "$PWD/scripts/" "$GITHUB_WORKSPACE/project/mac-xcode/bin/BoxedwineAutomation.app/Contents/MacOS/BoxedwineAutomation" -nosound -novideo && break || sleep 5
+          done
+
+  automation-windows:
+    name: Windows Automation
+    runs-on: windows-latest
+    needs: [build-windows]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download automation3.zip
+        shell: cmd
+        run: |
+          wget -N --no-if-modified-since -np http://boxedwine.org/v2/automation3.zip
+          IF EXIST "automation" rmdir /q /s "automation"
+          unzip automation3.zip
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: windows
+          path: automation\Deploy
+
+      - name: Run automation scripts
+        shell: cmd
+        run: |
+          for /L %%i in (1,1,3) do (
+            java -jar bin\BoxedWineRunner.jar "%WORKSPACE%\automation\fs\fs.zip" "%WORKSPACE%\automation\scripts" "%WORKSPACE%\automation\Deploy\Win64\Boxedwine.exe" -nosound -novideo && goto :eof || timeout /t 5
+          )
+
+  # Archive Artifacts
+  archive-artifacts:
+    name: Archive Artifacts
+    runs-on: ubuntu-latest
+    needs: [build-emscripten, build-linux64, build-mac, build-windows]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download artifacts (web)
+        uses: actions/download-artifact@v3
+        with:
+          name: web
+          path: Deploy/Web
+
+      - name: Download artifacts (linux64)
+        uses: actions/download-artifact@v3
+        with:
+          name: linux64
+          path: Deploy/Linux64
+
+      - name: Download artifacts (linux)
+        uses: actions/download-artifact@v3
+        with:
+          name: linux
+          path: Deploy/Linux
+
+      - name: Download artifacts (mac)
+        uses: actions/download-artifact@v3
+        with:
+          name: mac
+          path: Deploy/Mac
+
+      - name: Download artifacts (windows)
+        uses: actions/download-artifact@v3
+        with:
+          name: windows
+          path: Deploy/Windows
+
+      - name: Create readme.txt
+        run: |
+          echo "Linux64, LinuxArm64, and Win64 use the binary translator CPU core and are much faster. The others use the normal core or normal core + JIT." > Deploy/readme.txt
+
+      - name: Create zip file
+        run: |
+          zip -r build-${{ github.run_number }}.zip Deploy
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ github.run_number }}.zip
+          path: build-${{ github.run_number }}.zip
