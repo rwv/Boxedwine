@@ -41,8 +41,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Enable source repositories and install dependencies
+      - name: Enable repositories and install dependencies
         run: |
+          sudo add-apt-repository universe
           sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y build-essential
@@ -178,8 +179,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Enable source repositories and install dependencies
+      - name: Enable repositories and install dependencies
         run: |
+          sudo add-apt-repository universe
           sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y build-essential
@@ -318,8 +320,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Enable source repositories and install dependencies
+      - name: Enable repositories and install dependencies
         run: |
+          sudo add-apt-repository universe
           sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y build-essential
